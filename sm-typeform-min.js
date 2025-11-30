@@ -717,13 +717,31 @@
     }
 
     function rebuildZoom_(reason){
-      // “reinicia” el embeddable sin recargar navegador
-      state.zpReady = false;
-      window.__smConnTs = null;
-      window.__smRingTs = null;
-      try{ setCallBtnBusy_(true, "Conectando..."); }catch(_){}
-      try{ setZoomSrc_(); }catch(_){}
-    }
+  // “reinicia” el embeddable sin recargar navegador
+  state.zpReady = false;
+  window.__smConnTs = null;
+  window.__smRingTs = null;
+
+  // ✅ si quedaba un watchdog anterior, lo cortamos
+  clearWatchdog_();
+
+  try{ setCallBtnBusy_(true, "Conectando..."); }catch(_){}
+  try{ setZoomSrc_(); }catch(_){}
+
+  // ✅ watchdog: si NO llega zp-ready, suelta el botón
+  state.__callWatchdog = setTimeout(()=>{
+    if(state.zpReady) return;
+
+    state.__queuedCall = null;
+    state.__callBusy = false;
+    state.__callInProgress = false;
+    state.__callTry = 0;
+
+    setCallBtnBusy_(false);
+    toast("Zoom no conectó. Intenta de nuevo o recarga.");
+  }, 6500);
+}
+
 
     // expone make call (siempre)
     window.__smMakeZoomCall = (number)=>{
@@ -745,19 +763,21 @@
         if(!msg.type) return;
 
         if(msg.type === "zp-ready"){
-          state.zpReady = true;
-          initConfig_();
+  clearWatchdog_(); //  suelta cualquier watchdog de reconexión
 
-          // si había llamada en cola, dispara 1 sola vez
-          if(state.__queuedCall){
-            const n = state.__queuedCall;
-            state.__queuedCall = null;
+  state.zpReady = true;
+  initConfig_();
 
-            // pequeño delay para que el embeddable quede completamente listo
-            setTimeout(()=> window.__smMakeZoomCall && window.__smMakeZoomCall(n), 250);
-          }
-          return;
-        }
+  // si había llamada en cola, dispara 1 sola vez
+  if(state.__queuedCall){
+    const n = state.__queuedCall;
+    state.__queuedCall = null;
+
+    setTimeout(()=> window.__smMakeZoomCall && window.__smMakeZoomCall(n), 250);
+  }
+  return;
+}
+
 
         if(msg.type === "zp-call-ringing-event"){
           window.__smRingTs = window.__smRingTs || new Date();
