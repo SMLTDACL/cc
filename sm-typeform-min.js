@@ -35,7 +35,7 @@
       el.textContent = "—";
       return;
     }
-    el.innerHTML = <a class="sm-btn sm-btn-secondary" href="${url}" target="_blank" rel="noopener noreferrer">${txt}</a>;
+    el.innerHTML = `<a class="sm-btn sm-btn-secondary" href="${url}" target="_blank" rel="noopener noreferrer">${txt}</a>`;
   }
 
   function openPopup(){
@@ -91,7 +91,7 @@
     const res = qs("#sm-search-results");
     if(!m) return;
     if (inp) inp.value = "";
-    if (res) res.innerHTML = <div class="sm-search-hint">Ingresa un <strong>IDPIPE</strong> o un <strong>Email</strong>.</div>;
+    if (res) res.innerHTML = `<div class="sm-search-hint">Ingresa un <strong>IDPIPE</strong> o un <strong>Email</strong>.</div>`;
     m.style.display = "flex";
     m.setAttribute("aria-hidden", "false");
     setTimeout(()=>{
@@ -178,7 +178,7 @@
     const wrap = document.createElement("div");
     wrap.id = "sm-debug-wrap";
     wrap.style.cssText = "position:fixed;right:14px;bottom:14px;z-index:999999;display:flex;flex-direction:column;gap:8px;font-family:Inter,system-ui,Arial;font-size:12px;";
-    wrap.innerHTML =
+    wrap.innerHTML = `
       <div style="display:flex;gap:8px;justify-content:flex-end;">
         <button id="sm-debug-toggle" style="border:1px solid rgba(0,0,0,.12);background:#fff;border-radius:999px;padding:8px 10px;cursor:pointer;box-shadow:0 10px 30px rgba(0,0,0,.08);">Debug</button>
         <button id="sm-debug-copy" style="border:1px solid rgba(0,0,0,.12);background:#fff;border-radius:999px;padding:8px 10px;cursor:pointer;box-shadow:0 10px 30px rgba(0,0,0,.08);display:none;">Copiar</button>
@@ -190,7 +190,7 @@
         </div>
         <pre id="sm-debug-pre" style="white-space:pre-wrap;word-break:break-word;margin:0;color:#111827;line-height:1.35;">—</pre>
       </div>
-    ;
+    `;
 
     document.body.appendChild(wrap);
 
@@ -229,11 +229,11 @@
     badge.textContent = (debug.ms_total != null) ? (debug.ms_total + " ms") : "debug";
 
     const lines = [];
-    lines.push(ms_total: ${debug.ms_total ?? "—"});
-    lines.push(ms_lastRow: ${debug.ms_lastRow ?? "—"} | ms_readCols: ${debug.ms_readCols ?? "—"} | ms_scan: ${debug.ms_scan ?? "—"} | ms_readDealRow: ${debug.ms_readDealRow ?? "—"});
-    lines.push(lastRow: ${debug.lastRow ?? "—"} | n: ${debug.n ?? "—"} | sheet_getLastRow: ${debug.sheet_getLastRow ?? "—"});
-    lines.push(scanned: ${debug.scanned ?? "—"} | match_idc: ${debug.match_idc ?? "—"} | excluded_out: ${debug.excluded_out ?? "—"} | estado_ok: ${debug.estado_ok ?? "—"} | p1_found: ${debug.p1_found ?? "—"});
-    lines.push(bestRow: ${debug.bestRow ?? "—"} | detail: ${debug.detail ?? "—"});
+    lines.push(`ms_total: ${debug.ms_total ?? "—"}`);
+    lines.push(`ms_lastRow: ${debug.ms_lastRow ?? "—"} | ms_readCols: ${debug.ms_readCols ?? "—"} | ms_scan: ${debug.ms_scan ?? "—"} | ms_readDealRow: ${debug.ms_readDealRow ?? "—"}`);
+    lines.push(`lastRow: ${debug.lastRow ?? "—"} | n: ${debug.n ?? "—"} | sheet_getLastRow: ${debug.sheet_getLastRow ?? "—"}`);
+    lines.push(`scanned: ${debug.scanned ?? "—"} | match_idc: ${debug.match_idc ?? "—"} | excluded_out: ${debug.excluded_out ?? "—"} | estado_ok: ${debug.estado_ok ?? "—"} | p1_found: ${debug.p1_found ?? "—"}`);
+    lines.push(`bestRow: ${debug.bestRow ?? "—"} | detail: ${debug.detail ?? "—"}`);
 
     pre.textContent = lines.join("\n");
   }
@@ -241,9 +241,9 @@
   /* ===================== [F4] API ===================== */
   async function apiNext(idc, skipRids){
     const skip = Array.isArray(skipRids) ? skipRids.filter(Boolean).join(",") : "";
-    const url = ${ENDPOINT}?mode=next&idc=${encodeURIComponent(idc)} + &debug=1 + (skip ? &skip=${encodeURIComponent(skip)} : "") + &_=${Date.now()};
+    const url = `${ENDPOINT}?mode=next&idc=${encodeURIComponent(idc)}&debug=1${skip ? `&skip=${encodeURIComponent(skip)}` : ""}&_=${Date.now()}`;
     const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) throw new Error(next ${res.status});
+    if (!res.ok) throw new Error(`next ${res.status}`);
     return res.json();
   }
 
@@ -257,7 +257,7 @@
       note: note || ""
     });
     const res = await fetch(ENDPOINT, { method:"POST", body });
-    if (!res.ok) throw new Error(finalize ${res.status});
+    if (!res.ok) throw new Error(`finalize ${res.status}`);
     return res.json();
   }
 
@@ -268,44 +268,44 @@
       motivo: motivo || ""
     });
     const res = await fetch(ENDPOINT, { method:"POST", body });
-    if (!res.ok) throw new Error(omit ${res.status});
+    if (!res.ok) throw new Error(`omit ${res.status}`);
     return res.json();
   }
 
   async function apiDealByRid(rid){
-    const url = ${ENDPOINT}?mode=deal&rid=${encodeURIComponent(String(rid||""))}&_=${Date.now()};
+    const url = `${ENDPOINT}?mode=deal&rid=${encodeURIComponent(String(rid||""))}&_=${Date.now()}`;
     const res = await fetch(url, { cache:"no-store" });
-    if (!res.ok) throw new Error(deal ${res.status});
+    if (!res.ok) throw new Error(`deal ${res.status}`);
     return res.json();
   }
 
   async function apiSearch(q){
-    const url = ${ENDPOINT}?mode=search&q=${encodeURIComponent(String(q||""))}&_=${Date.now()};
+    const url = `${ENDPOINT}?mode=search&q=${encodeURIComponent(String(q||""))}&_=${Date.now()}`;
     const res = await fetch(url, { cache:"no-store" });
-    if (!res.ok) throw new Error(search ${res.status});
+    if (!res.ok) throw new Error(`search ${res.status}`);
     return res.json();
   }
 
   // ✅ ultra liviano: solo CH
   async function apiPayState(rid){
-    const url = ${ENDPOINT}?mode=paystate&rid=${encodeURIComponent(String(rid||""))}&_=${Date.now()};
+    const url = `${ENDPOINT}?mode=paystate&rid=${encodeURIComponent(String(rid||""))}&_=${Date.now()}`;
     const res = await fetch(url, { cache:"no-store" });
-    if (!res.ok) throw new Error(paystate ${res.status});
+    if (!res.ok) throw new Error(`paystate ${res.status}`);
     return res.json();
   }
 
   async function apiPayStateVig(rid){
-    const url = ${ENDPOINT}?mode=paystate_vig&rid=${encodeURIComponent(String(rid||""))}&_=${Date.now()};
+    const url = `${ENDPOINT}?mode=paystate_vig&rid=${encodeURIComponent(String(rid||""))}&_=${Date.now()}`;
     const res = await fetch(url, { cache:"no-store" });
-    if (!res.ok) throw new Error(paystate_vig ${res.status});
+    if (!res.ok) throw new Error(`paystate_vig ${res.status}`);
     return res.json();
   }
 
   // ✅ ultra liviano: solo BP
   async function apiLog(rid){
-    const url = ${ENDPOINT}?mode=log&rid=${encodeURIComponent(String(rid||""))}&_=${Date.now()};
+    const url = `${ENDPOINT}?mode=log&rid=${encodeURIComponent(String(rid||""))}&_=${Date.now()}`;
     const res = await fetch(url, { cache:"no-store" });
-    if (!res.ok) throw new Error(log ${res.status});
+    if (!res.ok) throw new Error(`log ${res.status}`);
     return res.json();
   }
 
@@ -353,20 +353,20 @@
     const labels = [label1, label2, label3, label4, label5];
 
     box.style.display = "block";
-    box.innerHTML =
+    box.innerHTML = `
       <div class="sm-track">
         ${labels.map((t, i) => {
           const idx = i + 1;
           const cls = (idx < active) ? "is-on" : (idx === active ? "is-on is-active" : "");
-          return
+          return `
             <div class="sm-track-step ${cls}">
               <div class="sm-track-dot"></div>
               <div class="sm-track-label">${t}</div>
             </div>
-          ;
+          `;
         }).join("")}
       </div>
-    ;
+    `;
   }
 
   /* ===================== [F5] STATE + RENDER ===================== */
@@ -387,7 +387,6 @@
     __callTry: 0,
     __queuedCall: null,
     __callWatchdog: null
-
   };
 
   const __smCLFmt = new Intl.DateTimeFormat("es-CL", {
@@ -406,7 +405,7 @@
       const parts = __smCLFmt.formatToParts(new Date(iso));
       const m = {};
       parts.forEach(p => { if (p.type !== "literal") m[p.type] = p.value; });
-      return ${m.day}-${m.month}-${m.year} ${m.hour}:${m.minute}:${m.second};
+      return `${m.day}-${m.month}-${m.year} ${m.hour}:${m.minute}:${m.second}`;
     }catch(_){
       return String(iso || "");
     }
@@ -416,7 +415,7 @@
     const s = Math.max(0, Number(totalSec || 0) | 0);
     const m = Math.floor(s / 60);
     const r = s % 60;
-    return ${m}:${String(r).padStart(2,"0")};
+    return `${m}:${String(r).padStart(2,"0")}`;
   }
 
   function renderCalls(){
@@ -426,14 +425,14 @@
       box.textContent = "—";
       return;
     }
-    box.innerHTML = state.calls.map(c =>
+    box.innerHTML = state.calls.map(c => `
       <div class="sm-call-item">
         <div><strong>${c.number}</strong></div>
         <div style="color:#6b7280;font-size:12px;">Inicio: ${fmtChile(c.start_iso)}</div>
         <div style="color:#6b7280;font-size:12px;">Fin: ${fmtChile(c.end_iso)}</div>
         <div style="color:#6b7280;font-size:12px;">Duración: ${c.duration_sec}s</div>
       </div>
-    ).join("");
+    `).join("");
   }
 
   function dealToUI(d){
@@ -493,7 +492,7 @@
       const s = fmtChile(c.start_iso);
       const e = fmtChile(c.end_iso);
       const mss = formatMSS(c.duration_sec);
-      return ${s} / ${e} = ${mss};
+      return `${s} / ${e} = ${mss}`;
     }).join("\n");
   }
 
@@ -676,7 +675,7 @@
   }
 
   /* ===================== [F6] ZOOM PHONE ===================== */
-    function initZoom(){
+  function initZoom(){
     const iframe = qs("#sm-zoomphone-iframe");
     if(!iframe) return;
 
@@ -814,8 +813,7 @@
     window.__smZoomClearWatchdog = clearWatchdog_;
   }
 
-
-    function doCall(){
+  function doCall(){
     const num = (qs("#sm-phone")?.value || "").trim();
     if(!num){ toast("Falta teléfono"); return; }
 
@@ -864,7 +862,6 @@
 
     attempt();
   }
-
 
   /* ===================== [F6.1] REFRESH ESTADO PAGO (SHIMMER) ===================== */
   async function doRefreshPayState(){
@@ -1086,14 +1083,14 @@
     if(!box) return;
 
     if(!Array.isArray(list) || !list.length){
-      box.innerHTML = <div class="sm-search-empty">No encontré tratos activos (Q vacío) para ese email.</div>;
+      box.innerHTML = `<div class="sm-search-empty">No encontré tratos activos (Q vacío) para ese email.</div>`;
       return;
     }
 
-    box.innerHTML =
+    box.innerHTML = `
       <div class="sm-search-meta">Resultados: <strong>${list.length}</strong></div>
       <div class="sm-search-list">
-        ${list.map(item =>
+        ${list.map(item => `
           <div class="sm-search-item">
             <div class="sm-search-left">
               <div class="sm-search-idpipe">${(item.IDPIPE || "—")}</div>
@@ -1101,9 +1098,9 @@
             </div>
             <button class="sm-btn sm-btn-primary sm-btn-xs" type="button" data-pick-rid="${item.RID}">Ver trato</button>
           </div>
-        ).join("")}
+        `).join("")}
       </div>
-    ;
+    `;
   }
 
   async function doSearch(){
@@ -2095,4 +2092,3 @@
     init();
   }
 })();
-
