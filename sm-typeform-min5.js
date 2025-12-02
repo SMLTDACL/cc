@@ -3,9 +3,9 @@
   window.__smCRMAppLoaded = true;
 
   /* ===================== [F1] CONFIG ===================== */
-  const ENDPOINT = "https://script.google.com/macros/s/AKfycbxkj_T1bbS3SD3l-MHeCNTfHxSScmmLbl_AfXmZOi4SI83CiEu48tejdhd4taODZs5w7w/exec";
+  const ENDPOINT = "https://script.google.com/macros/s/AKfycbwNM24mq5Yq4wnyYDxbBo1Mx4Vfnuwoo9yh-fKWqEvmk3D2ivzq8J4njzBxVYEWB62Ilw/exec";
   const ZOOM_ORIGIN = "https://applications.zoom.us";
-  const ENDPOINT_LOG_MENSUAL = "https://script.google.com/macros/s/AKfycbxdDS2PpnZLJQUWFYlxXxN7xyYnkfPUhKFqCJ56N__zGK1a8iY2FQRkCpNjhpxUQKtW/exec";
+  const ENDPOINT_LOG_MENSUAL = "https://script.google.com/macros/s/AKfycbyS9GYMnduoMX6_WiPaZt2YTjxphQ7ky0DGLsGbdUhuXNVpGEBx_3QxmRMSd6eQAA6I/exec";
 
   // ZAPIER WEBHOOKS
   const ZAPIER_ANALISIS = "https://hooks.zapier.com/hooks/catch/6030955/ukh9o60/";
@@ -248,38 +248,44 @@
     return res.json();
   }
 
-  async function apiFinalize({ rid, obs, calls_text, survey, note }){
-    const body = new URLSearchParams({
-      mode: "finalize",
-      rid: String(rid || ""),
-      obs: obs || "",
-      calls_text: calls_text || "",
-      survey: survey || "",
-      note: note || ""
-    });
-    const res = await fetch(ENDPOINT, { method:"POST", body });
-    if (!res.ok) throw new Error(`finalize ${res.status}`);
-    return res.json();
-  }
-
-  async function apiLogMensual({ idc, idpipe, fecha_completa, recorrido, tiempo_total, tiempo_total_sec, final_code }){
-  const res = await fetch(ENDPOINT_LOG_MENSUAL, {
-    method: "POST",
-    headers: { "Content-Type":"application/json" },
-    body: JSON.stringify({
-      idc,
-      idpipe,
-      fecha_completa,
-      recorrido,
-      tiempo_total,
-      tiempo_total_sec,
-      final_code
-    })
+  async function apiFinalize({ rid, obs, calls_text, survey, recorrido }){
+  const body = new URLSearchParams({
+    mode: "finalize",
+    rid: String(rid || ""),
+    obs: obs || "",
+    calls_text: calls_text || "",
+    survey: survey || "",
+    recorrido: recorrido || ""   
   });
-  // este endpoint responde JSON; si falla, que explote para capturarlo donde lo llamas
-  if (!res.ok) throw new Error(`logmensual ${res.status}`);
+  const res = await fetch(ENDPOINT, { method:"POST", body });
+  if (!res.ok) throw new Error(`finalize ${res.status}`);
   return res.json();
 }
+
+
+  async function apiLogMensual({ idc, idpipe, fecha_completa, recorrido, tiempo_total, tiempo_total_sec, final_code }){
+  const body = new URLSearchParams({
+    idc: idc || "",
+    idpipe: idpipe || "",
+    fecha_completa: fecha_completa || "",
+    recorrido: recorrido || "",
+    tiempo_total: tiempo_total || "",
+    tiempo_total_sec: String(tiempo_total_sec ?? ""),
+    final_code: final_code || ""
+  });
+
+  //  no preflight + no CORS issues (envío “fire and forget”)
+  await fetch(ENDPOINT_LOG_MENSUAL, {
+    method: "POST",
+    mode: "no-cors",
+    keepalive: true,
+    body
+  });
+
+  // No podemos leer respuesta en no-cors (queda “opaque”), pero el POST sí llega.
+  return { ok: true };
+}
+
 
 
   async function apiOmit({ rid, motivo }){
@@ -555,12 +561,13 @@
 
       // Guardar igual que antes (último contacto + obs + log llamadas)
       const data = await apiFinalize({
-        rid,
-        obs: state.pending.obs || "",
-        calls_text: state.pending.calls_text || "",
-        survey: String(payload?.numero_pregunta || ""),
-        note: String(payload?.recorrido || "")
-      });
+  rid,
+  obs: state.pending.obs || "",
+  calls_text: state.pending.calls_text || "",
+  survey: String(payload?.numero_pregunta || ""),
+  recorrido: String(payload?.recorrido || "")
+});
+
 
       if(!data?.ok) throw new Error(data?.error || "bad_finalize");
 
