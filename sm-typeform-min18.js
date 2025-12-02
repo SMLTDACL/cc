@@ -673,7 +673,7 @@ const nextPromise =
       dealToUI(nextData.deal);
       openPopup();
     } else {
-  toast("No quedan llamadas disponible");
+  toast("No quedan llamadas disponibles");
   closePopup();
   showDealView();
   try{ window.__smTypeformMinReset && window.__smTypeformMinReset(); }catch(_){}
@@ -789,11 +789,22 @@ const nextPromise =
       dealToUI(data.deal);
       openPopup();
     }catch(e){
-      console.error("[SM] next error", e);
-      toast("No se pudo cargar");
-    }finally{
-      finishDealLoader();
-    }
+  console.error("[SM] next error", e);
+
+  const msg = String(e?.message || e || "");
+  if (msg.includes("no_deals")){
+    closePopup();
+    showDealView();
+    try{ window.__smTypeformMinReset && window.__smTypeformMinReset(); }catch(_){}
+    toast("No quedan llamadas disponible");
+    return;
+  }
+
+  toast("No se pudo cargar");
+}finally{
+  finishDealLoader();
+}
+
   }
 
   async function loadDealByRid(rid){
