@@ -625,6 +625,7 @@ const nextPromise =
     : (idc ? apiNext(idc, skipNow) : Promise.resolve(null))
         .catch(err => ({ ok:false, error:String(err?.message || err), __preloadFail:true }));
 
+    startDealLoader();
 
   try{
     // 3) Guardado (lento)
