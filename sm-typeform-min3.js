@@ -5,6 +5,7 @@
   /* ===================== [F1] CONFIG ===================== */
   const ENDPOINT = "https://script.google.com/macros/s/AKfycbwu_evmAaDUpLsfIVsd9vkO01OkDbDWxiAggVxNjyR0B_bmoaAJUGOVw1edqFSCGWCr/exec";
   const ZOOM_ORIGIN = "https://applications.zoom.us";
+  const ENDPOINT_LOG_MENSUAL = "https://script.google.com/macros/s/AKfycbxcHOmoHU_VJy7K_zlD6g0iXZY3vs9NOlR_iAMz_yM7qTP3Oj_HWz5kRVR-U4ljKWOn/exec";
 
   // ZAPIER WEBHOOKS
   const ZAPIER_ANALISIS = "https://hooks.zapier.com/hooks/catch/6030955/ukh9o60/";
@@ -260,6 +261,26 @@
     if (!res.ok) throw new Error(`finalize ${res.status}`);
     return res.json();
   }
+
+  async function apiLogMensual({ idc, idpipe, fecha_completa, recorrido, tiempo_total, tiempo_total_sec, final_code }){
+  const res = await fetch(ENDPOINT_LOG_MENSUAL, {
+    method: "POST",
+    headers: { "Content-Type":"application/json" },
+    body: JSON.stringify({
+      idc,
+      idpipe,
+      fecha_completa,
+      recorrido,
+      tiempo_total,
+      tiempo_total_sec,
+      final_code
+    })
+  });
+  // este endpoint responde JSON; si falla, que explote para capturarlo donde lo llamas
+  if (!res.ok) throw new Error(`logmensual ${res.status}`);
+  return res.json();
+}
+
 
   async function apiOmit({ rid, motivo }){
     const body = new URLSearchParams({
@@ -542,6 +563,22 @@
       });
 
       if(!data?.ok) throw new Error(data?.error || "bad_finalize");
+
+      // ✅ NUEVO: registrar en la otra planilla mensual (NO bloquea si falla)
+try{
+  await apiLogMensual({
+    idc: getIDC(),
+    idpipe: (state.deal?.IDPIPE || ""),
+    fecha_completa: fmtChile(new Date().toISOString()),
+    recorrido: String(payload?.recorrido || ""),
+    tiempo_total: totalCallsMSS_(),
+    tiempo_total_sec: totalCallsSec_(),
+    final_code: String(payload?.numero_pregunta || "")
+  });
+}catch(err){
+  console.error("[SM] log mensual error", err);
+}
+
 
       if (!state.skipRids.includes(rid)) state.skipRids.push(rid);
       state.pending = null;
