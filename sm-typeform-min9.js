@@ -571,14 +571,8 @@
   const rid = state.pending.rid;
   const idc = getIDC();
 
-  // 2) 🔥 PRELOAD NEXT en paralelo (evita que vuelva el mismo)
-  const skipNow = Array.isArray(state.skipRids) ? state.skipRids.slice() : [];
-  if (rid && !skipNow.includes(rid)) skipNow.push(rid);
 
-  // Muestra loader global mientras se solapan ambas cosas
-  startDealLoader();
-
-  // 2) ✅ Usa preload ya corriendo (si existe) o crea uno ahora
+  // 2) Usa preload ya corriendo (si existe) o crea uno ahora
 const skipNow = Array.isArray(state.skipRids) ? state.skipRids.slice() : [];
 if (rid && !skipNow.includes(rid)) skipNow.push(rid);
 
