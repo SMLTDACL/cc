@@ -3,7 +3,7 @@
   window.__smCRMAppLoaded = true;
 
   /* ===================== [F1] CONFIG ===================== */
-  const ENDPOINT = "https://script.google.com/macros/s/AKfycbz4GINXdfNdy_chax6_K7HLbIDKo0E0dX_MTBcUsZjDTvwd5S2O8wxYK7haYDBqDwz0pw/exec";
+  const ENDPOINT = "https://script.google.com/macros/s/AKfycbxV514cTxJsGWNq4UNrMK_VQOmYYNDVh0sAKxYiI6716PDjvm7v4PUewie0_H531gskpw/exec";
   const ZOOM_ORIGIN = "https://applications.zoom.us";
 
   // ZAPIER WEBHOOKS
