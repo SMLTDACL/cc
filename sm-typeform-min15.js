@@ -1401,6 +1401,17 @@ const nextPromise =
         return;
       }
 
+      // Header calendar (abre nueva pestaña)
+      const calBtn = el && el.closest && el.closest("#sm-btn-calendar");
+      if (calBtn){
+      ev.preventDefault();
+      const idc = getIDC();
+      const url = `https://www.simplemarcas.cl/agendamiento-calendario1764009390297?idc=${encodeURIComponent(idc)}`;
+      window.open(url, "_blank", "noopener,noreferrer");
+      return;
+      }
+
+
       // Header search (funciona aunque cliquees el SVG/path)
       const searchBtn = el && el.closest && el.closest("#sm-btn-search");
       if (searchBtn){
