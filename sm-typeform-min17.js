@@ -16,12 +16,28 @@
 
   /* ===================== [F2] UI HELPERS ===================== */
   function toast(msg, ms=1600){
-    const t = qs('#sm-toast');
-    if (!t) return;
-    t.textContent = msg;
-    t.classList.add('is-show');
-    setTimeout(()=> t.classList.remove('is-show'), ms);
+  let t = qs('#sm-toast');
+
+  // si no existe, lo creamos en el body
+  if(!t){
+    t = document.createElement("div");
+    t.id = "sm-toast";
+    document.body.appendChild(t);
   }
+
+  // si está dentro del overlay/popup, lo movemos al body para que no se oculte al cerrar
+  const ov = qs("#sm-overlay");
+  if (ov && ov.contains(t)){
+    document.body.appendChild(t);
+  }
+
+  t.textContent = msg;
+  t.classList.add('is-show');
+
+  if (t.__hideTimer) clearTimeout(t.__hideTimer);
+  t.__hideTimer = setTimeout(()=> t.classList.remove('is-show'), ms);
+}
+
 
   function getIDC(){
     const p = new URLSearchParams(location.search);
@@ -657,12 +673,12 @@ const nextPromise =
       dealToUI(nextData.deal);
       openPopup();
     } else {
-  // ✅ no hay siguiente trato: cerrar popup + volver a vista deal + toast
+  toast("No quedan llamadas disponible");
   closePopup();
   showDealView();
   try{ window.__smTypeformMinReset && window.__smTypeformMinReset(); }catch(_){}
-  toast("No quedan llamadas disponible");
 }
+
 
 
     return { ok:true, ms: Date.now() - startedAt };
