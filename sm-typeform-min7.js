@@ -544,29 +544,89 @@
 
   // Esta función la llama el componente al apretar "Aceptar y enviar"
   window.__smSurveyFinalizeFromTypeform = async function(payload){
-    // payload esperado: { numero_pregunta, detalle, recorrido }
+  // payload esperado: { numero_pregunta, detalle, recorrido }
+  const startedAt = Date.now();
+
+  // 1) Asegura pending (como antes)
+  if(!state.pending?.rid){
+    if(!state.deal?.RID) {
+      toast("Sin trato");
+      return { ok:false, error:"no_deal" };
+    }
+    const obs = (qs("#sm-obs")?.value || "").trim();
+    const calls_text = callsToText();
+    state.pending = { rid: state.deal.RID, obs, calls_text };
+  }
+
+  const rid = state.pending.rid;
+  const idc = getIDC();
+
+  // 2) 🔥 PRELOAD NEXT en paralelo (evita que vuelva el mismo)
+  const skipNow = Array.isArray(state.skipRids) ? state.skipRids.slice() : [];
+  if (rid && !skipNow.includes(rid)) skipNow.push(rid);
+
+  // Muestra loader global mientras se solapan ambas cosas
+  startDealLoader();
+
+  const nextPromise = (idc ? apiNext(idc, skipNow) : Promise.resolve(null))
+    .catch(err => ({ ok:false, error:String(err?.message || err), __preloadFail:true }));
+
+  try{
+    // 3) Guardado (lento)
+    const data = await apiFinalize({
+      rid,
+      obs: state.pending.obs || "",
+      calls_text: state.pending.calls_text || "",
+      survey: String(payload?.numero_pregunta || ""),
+      recorrido: String(payload?.recorrido || "")
+    });
+
+    if(!data?.ok) throw new Error(data?.error || "bad_finalize");
+
+    // 4) Log mensual (no bloquea fuerte, pero lo dejamos aquí)
     try{
-      // Asegura "pending" como lo hacía el flow antiguo
-      if(!state.pending?.rid){
-        if(!state.deal?.RID) {
-          toast("Sin trato");
-          return { ok:false, error:"no_deal" };
-        }
-        const obs = (qs("#sm-obs")?.value || "").trim();
-        const calls_text = callsToText();
-        state.pending = { rid: state.deal.RID, obs, calls_text };
-      }
+      await apiLogMensual({
+        idc,
+        idpipe: (state.deal?.IDPIPE || ""),
+        fecha_completa: fmtChile(new Date().toISOString()),
+        recorrido: String(payload?.recorrido || ""),
+        tiempo_total: totalCallsMSS_(),
+        tiempo_total_sec: totalCallsSec_(),
+        final_code: String(payload?.numero_pregunta || "")
+      });
+    }catch(err){
+      console.error("[SM] log mensual error", err);
+    }
 
-      const rid = state.pending.rid;
+    // 5) Marca RID como “saltado” apenas guardó
+    if (!state.skipRids.includes(rid)) state.skipRids.push(rid);
+    state.pending = null;
 
-      // Guardar igual que antes (último contacto + obs + log llamadas)
-      const data = await apiFinalize({
-  rid,
-  obs: state.pending.obs || "",
-  calls_text: state.pending.calls_text || "",
-  survey: String(payload?.numero_pregunta || ""),
-  recorrido: String(payload?.recorrido || "")
-});
+    // 6) Si el preload ya llegó, lo usamos (si no, lo esperamos ahora)
+    const nextData = await nextPromise;
+
+    if (nextData?.ok && nextData.deal){
+      // opcional: debug panel como loadDeal()
+      try{ renderDebug(nextData?.debug); }catch(_){}
+      dealToUI(nextData.deal);
+      openPopup();
+    } else {
+      // fallback: si preload falló o no hay deals
+      const errMsg = String(nextData?.error || "");
+      if (errMsg.includes("no_deals")) toast("No hay más tratos");
+      else toast("No se pudo cargar el siguiente");
+    }
+
+    return { ok:true, ms: Date.now() - startedAt };
+  }catch(e){
+    console.error("[SM] finalize(typeform) error", e);
+    toast("Error al guardar");
+    return { ok:false, error:String(e?.message || e) };
+  }finally{
+    finishDealLoader();
+  }
+};
+
 
 
       if(!data?.ok) throw new Error(data?.error || "bad_finalize");
