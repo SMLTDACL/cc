@@ -2023,7 +2023,13 @@ const nextPromise =
         steps.push(step);
       });
 
-      return steps.join(" > ");
+      //  elimina duplicados consecutivos
+const compact = [];
+for (let i = 0; i < steps.length; i++){
+  if (steps[i] && steps[i] !== compact[compact.length - 1]) compact.push(steps[i]);
+}
+return compact.join(" > ");
+
     }
 
     function postWebhook(payload, ctx){
