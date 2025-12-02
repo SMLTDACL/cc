@@ -629,37 +629,6 @@
 
 
 
-      if(!data?.ok) throw new Error(data?.error || "bad_finalize");
-
-      // ✅ NUEVO: registrar en la otra planilla mensual (NO bloquea si falla)
-try{
-  await apiLogMensual({
-    idc: getIDC(),
-    idpipe: (state.deal?.IDPIPE || ""),
-    fecha_completa: fmtChile(new Date().toISOString()),
-    recorrido: String(payload?.recorrido || ""),
-    tiempo_total: totalCallsMSS_(),
-    tiempo_total_sec: totalCallsSec_(),
-    final_code: String(payload?.numero_pregunta || "")
-  });
-}catch(err){
-  console.error("[SM] log mensual error", err);
-}
-
-
-      if (!state.skipRids.includes(rid)) state.skipRids.push(rid);
-      state.pending = null;
-
-      // Igual que antes: traer siguiente trato
-      await loadDeal();
-      return { ok:true };
-    }catch(e){
-      console.error("[SM] finalize(typeform) error", e);
-      toast("Error al guardar");
-      return { ok:false, error:String(e?.message || e) };
-    }
-  };
-
   /* ===================== [F5.1] LOADER OVERLAY GLOBAL ===================== */
   function startDealLoader(){
     const ov = qs("#sm-loader-overlay");
