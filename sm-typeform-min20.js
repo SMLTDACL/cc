@@ -492,21 +492,38 @@
   }
 
   function renderHistorialBT(txt){
-    const box = qs("#sm-history");
-    if(!box) return;
+  const box = qs("#sm-history");
+  if(!box) return;
 
-    const t = String(txt || "").trim();
-    if(!t){
-      box.textContent = "—";
-      smScrollHistoryBottom();
-      return;
-    }
-
-    box.innerHTML = `<pre class="sm-calls-pre"></pre>`;
-    box.querySelector("pre").textContent = t;
-
+  const t = String(txt || "").trim();
+  if(!t){
+    box.textContent = "—";
     smScrollHistoryBottom();
+    return;
   }
+
+  // separa por líneas y dibuja zebra
+  const lines = t.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+
+  box.innerHTML = `
+    <div class="sm-history-list">
+      ${lines.map((line)=> `<div class="sm-history-line">${escapeHtml(line)}</div>`).join("")}
+    </div>
+  `;
+
+  smScrollHistoryBottom();
+}
+
+// helper simple para no romper el HTML si viene algo raro
+function escapeHtml(s){
+  return String(s)
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#39;");
+}
+
 
 
   function dealToUI(d){
