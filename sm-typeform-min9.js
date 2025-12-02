@@ -413,7 +413,12 @@
     __callInProgress: false,
     __callTry: 0,
     __queuedCall: null,
-    __callWatchdog: null
+    __callWatchdog: null,
+    __preloadRid: null,
+    __preloadPromise: null,
+    __preloadResult: null,
+    __preloadTs: 0
+
   };
 
   const __smCLFmt = new Intl.DateTimeFormat("es-CL", {
@@ -466,6 +471,11 @@
     state.deal = d;
     state.calls = [];
     state.pending = null;
+    state.__preloadRid = null;
+    state.__preloadPromise = null;
+    state.__preloadResult = null;
+    state.__preloadTs = 0;
+
 
     renderCalls();
     showDealView();
@@ -568,8 +578,16 @@
   // Muestra loader global mientras se solapan ambas cosas
   startDealLoader();
 
-  const nextPromise = (idc ? apiNext(idc, skipNow) : Promise.resolve(null))
-    .catch(err => ({ ok:false, error:String(err?.message || err), __preloadFail:true }));
+  // 2) ✅ Usa preload ya corriendo (si existe) o crea uno ahora
+const skipNow = Array.isArray(state.skipRids) ? state.skipRids.slice() : [];
+if (rid && !skipNow.includes(rid)) skipNow.push(rid);
+
+const nextPromise =
+  (state.__preloadPromise && state.__preloadRid === rid)
+    ? state.__preloadPromise
+    : (idc ? apiNext(idc, skipNow) : Promise.resolve(null))
+        .catch(err => ({ ok:false, error:String(err?.message || err), __preloadFail:true }));
+
 
   try{
     // 3) Guardado (lento)
@@ -604,6 +622,13 @@
 
     // 6) Si el preload ya llegó, lo usamos (si no, lo esperamos ahora)
     const nextData = await nextPromise;
+
+    //  consume/limpia precarga
+    state.__preloadRid = null;
+    state.__preloadPromise = null;
+    state.__preloadResult = null;
+    state.__preloadTs = 0;
+
 
     if (nextData?.ok && nextData.deal){
       // opcional: debug panel como loadDeal()
@@ -1083,7 +1108,36 @@
       state.__logBusy = false;
     }
   }
+  /* ===================== [F6.9] PRE CARGA ===================== */
 
+  function preloadNextDealForCurrent(){
+  const idc = getIDC();
+  const rid = state.deal?.RID;
+  if(!idc || !rid) return;
+
+  // si ya está precargando para ESTE rid, no hagas nada
+  if(state.__preloadRid === rid && state.__preloadPromise) return;
+
+  const skipNow = Array.isArray(state.skipRids) ? state.skipRids.slice() : [];
+  if(rid && !skipNow.includes(rid)) skipNow.push(rid);
+
+  state.__preloadRid = rid;
+  state.__preloadTs = Date.now();
+  state.__preloadResult = null;
+
+  state.__preloadPromise = apiNext(idc, skipNow)
+    .then(d => {
+      state.__preloadResult = d;
+      return d;
+    })
+    .catch(err => {
+      const o = { ok:false, error:String(err?.message || err), __preloadFail:true };
+      state.__preloadResult = o;
+      return o;
+    });
+}
+
+  
   /* ===================== [F7] FLOW ACTIONS ===================== */
   function doAcceptAndContinue(){
     if(!state.deal?.RID){
@@ -1093,6 +1147,9 @@
     const obs = (qs("#sm-obs")?.value || "").trim();
     const calls_text = callsToText();
     state.pending = { rid: state.deal.RID, obs, calls_text };
+
+    preloadNextDealForCurrent();
+    
     showSurveyView();
   }
 
