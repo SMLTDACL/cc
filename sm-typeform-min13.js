@@ -467,6 +467,15 @@
     `).join("");
   }
 
+  function smScrollHistoryBottom(){
+  const el = qs("#sm-history");
+  if(!el) return;
+  requestAnimationFrame(() => {
+    if (el.scrollHeight > el.clientHeight) el.scrollTop = el.scrollHeight;
+  });
+}
+
+  
   function renderHistorialBT(txt){
   const box = qs("#sm-history");
   if(!box) return;
@@ -474,8 +483,16 @@
   const t = String(txt || "").trim();
   if(!t){
     box.textContent = "—";
+    smScrollHistoryBottom(); // ✅ NUEVO
     return;
   }
+
+  box.innerHTML = `<pre class="sm-calls-pre"></pre>`;
+  box.querySelector("pre").textContent = t;
+
+  smScrollHistoryBottom(); // ✅ NUEVO
+}
+
 
   // lo mostramos como texto con saltos de línea, sin HTML
   box.innerHTML = `<pre class="sm-calls-pre"></pre>`;
