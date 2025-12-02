@@ -657,11 +657,13 @@ const nextPromise =
       dealToUI(nextData.deal);
       openPopup();
     } else {
-      // fallback: si preload falló o no hay deals
-      const errMsg = String(nextData?.error || "");
-      if (errMsg.includes("no_deals")) toast("No hay más tratos");
-      else toast("No se pudo cargar el siguiente");
-    }
+  // ✅ no hay siguiente trato: cerrar popup + volver a vista deal + toast
+  closePopup();
+  showDealView();
+  try{ window.__smTypeformMinReset && window.__smTypeformMinReset(); }catch(_){}
+  toast("No quedan llamadas disponible");
+}
+
 
     return { ok:true, ms: Date.now() - startedAt };
   }catch(e){
