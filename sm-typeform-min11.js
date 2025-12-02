@@ -467,6 +467,21 @@
     `).join("");
   }
 
+  function renderHistorialBT(txt){
+  const box = qs("#sm-history");
+  if(!box) return;
+
+  const t = String(txt || "").trim();
+  if(!t){
+    box.textContent = "—";
+    return;
+  }
+
+  // lo mostramos como texto con saltos de línea, sin HTML
+  box.innerHTML = `<pre class="sm-calls-pre"></pre>`;
+  box.querySelector("pre").textContent = t;
+}
+
   function dealToUI(d){
     state.deal = d;
     state.calls = [];
@@ -480,6 +495,7 @@
     renderCalls();
     showDealView();
     renderTracking(d.ESTADO);
+    renderHistorialBT(d.LOG_BT || d.BT || "");
 
     // Reset encuesta para cada trato
     try{ window.__smTypeformMinReset && window.__smTypeformMinReset(); }catch(_){}
