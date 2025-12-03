@@ -5,7 +5,7 @@
   /* ===================== [F1] CONFIG ===================== */
   const ENDPOINT = "https://script.google.com/macros/s/AKfycbx2Fe_jl3D6RvWw71KQWL7ldnge11AeCunyV29R-Kuj_eT5ft0WnHFp7jp5wHyxtVzPTQ/exec";
   const ZOOM_ORIGIN = "https://applications.zoom.us";
-  const ENDPOINT_LOG_MENSUAL = "https://script.google.com/macros/s/AKfycbyS9GYMnduoMX6_WiPaZt2YTjxphQ7ky0DGLsGbdUhuXNVpGEBx_3QxmRMSd6eQAA6I/exec";
+  const ENDPOINT_LOG_MENSUAL = "https://script.google.com/macros/s/AKfycbywcppMKfuQQ_UJ8Gt2DBrF46z-915ezMf99xaAgEvJNGCSOpqBf0rLVne-X6wMKFNA/exec";
 
   // ZAPIER WEBHOOKS
   const ZAPIER_ANALISIS = "https://hooks.zapier.com/hooks/catch/6030955/ukh9o60/";
