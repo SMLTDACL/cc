@@ -1448,6 +1448,19 @@ const nextPromise =
         return;
       }
 
+      // Header stats (abre nueva pestaña)
+      const statsBtn = el && el.closest && el.closest("#sm-btn-stats");
+      if (statsBtn){
+      ev.preventDefault();
+      const p = new URLSearchParams(location.search);
+      const idc = getIDC();
+      const codep = (p.get("codep") || "").trim();
+      const url = `https://www.simplemarcas.cl/stats4342755671134?idc=${encodeURIComponent(idc)}&codep=${encodeURIComponent(codep)}`;
+      window.open(url, "_blank", "noopener,noreferrer");
+      return;
+    }
+
+
       // Header calendar (abre nueva pestaña)
       const calBtn = el && el.closest && el.closest("#sm-btn-calendar");
       if (calBtn){
