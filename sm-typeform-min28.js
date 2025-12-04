@@ -882,31 +882,57 @@ const nextPromise =
       }
     }
 
-    function rebuildZoom_(reason){
+function rebuildZoom_(reason){
   // “reinicia” el embeddable sin recargar navegador
   state.zpReady = false;
   window.__smConnTs = null;
   window.__smRingTs = null;
 
-  // ✅ si quedaba un watchdog anterior, lo cortamos
+  // corta cualquier watchdog anterior
   clearWatchdog_();
 
   try{ setCallBtnBusy_(true, "Conectando..."); }catch(_){}
+
+  // vuelve a cargar el iframe (por si acaso)
   try{ setZoomSrc_(); }catch(_){}
 
-  // ✅ watchdog: si NO llega zp-ready, suelta el botón
+  // watchdog: si NO llega zp-ready en 6.5s, libera y abre pestaña de login
   state.__callWatchdog = setTimeout(()=>{
-    if(state.zpReady) return;
+    if (state.zpReady) return;
 
+    // limpia estado de llamada
     state.__queuedCall = null;
     state.__callBusy = false;
     state.__callInProgress = false;
     state.__callTry = 0;
 
     setCallBtnBusy_(false);
-    toast("Zoom no conectó. Intenta de nuevo o recarga.");
+
+    // construye la misma URL que usa el iframe
+    var iframe = document.querySelector("#sm-zoomphone-iframe");
+    var url = iframe && iframe.src;
+
+    if (!url){
+      try{
+        var originDomain = encodeURIComponent(window.location.origin);
+        url = ZOOM_ORIGIN + "/integration/phone/embeddablephone/home?originDomain=" + originDomain + "&_=" + Date.now();
+      }catch(_){}
+    }
+
+    if (url){
+      try{
+        window.open(url, "_blank", "noopener,noreferrer");
+        toast("Abre la pestaña de Zoom, inicia sesión y luego vuelve a intentar llamar.");
+      }catch(e){
+        // si el navegador bloquea el popup, al menos deja el mensaje
+        toast("Zoom no conectó. Permite la ventana emergente para iniciar sesión en Zoom.");
+      }
+    }else{
+      toast("Zoom no conectó. Intenta de nuevo o recarga.");
+    }
   }, 6500);
 }
+
 
 
     // expone make call (siempre)
