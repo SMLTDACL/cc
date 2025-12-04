@@ -3,7 +3,7 @@
   window.__smCRMAppLoaded = true;
 
   /* ===================== [F1] CONFIG ===================== */
-  const ENDPOINT = "https://script.google.com/macros/s/AKfycbwudQ6YEgpeyEEx-g5PbspVdJ0xVR_cXSMoSKa15bc2-kVIlsrRfA6jWDbjPqjCDGH-/exec";
+  const ENDPOINT = "https://script.google.com/macros/s/AKfycby_jjhpH0PRnzfVMpZGICLj_i_aOmNkUsEzTcfKPjSTM4NQIU93VlFnA5CtziUweNdm/exec";
   const ZOOM_ORIGIN = "https://applications.zoom.us";
   const ENDPOINT_LOG_MENSUAL = "https://script.google.com/macros/s/AKfycbzYjrCG36UnjyoZfgw_NOVAhgYn2kNQmKSQLigFMO9drgoPCVLgRyITN8OUyJDSrs4d/exec";
 
@@ -59,25 +59,13 @@
     const o = qs("#sm-overlay");
     if(!o) return;
     o.style.display = "flex";
-
-    state.__popupOpen = true;
-
-    // marca presencia solo cuando realmente está abierto el popup
-    const rid = state.deal?.RID;
-    if (rid) presenceStartOrSwitch_(rid);
   }
 
   function closePopup(){
     const o = qs("#sm-overlay");
     if(!o) return;
-
-    // al cerrar, baja el checkbox del rid actual
-    state.__popupOpen = false;
-    presenceStop_();
-
     o.style.display = "none";
   }
-
 
   function showDealView(){
     qs("#sm-view-deal") && (qs("#sm-view-deal").style.display = "block");
@@ -364,114 +352,6 @@
     return res.json();
   }
 
-function apiPresence({ rid, sid, action }){
-  const r = String(rid || "").trim();
-  const s = String(sid || "").trim();
-  const a = String(action || "").trim();
-  if (!r || !s || !a) return { ok:false };
-
-  const body = new URLSearchParams({
-    mode: "presence",
-    rid: r,
-    sid: s,
-    action: a
-  });
-
-  // 1) Mejor opción: Beacon POST (no CORS, no bloquea)
-  try{
-    if (navigator.sendBeacon){
-      navigator.sendBeacon(ENDPOINT, body);
-      return { ok:true };
-    }
-  }catch(_){}
-
-  // 2) Fallback: POST no-cors (tampoco leemos respuesta)
-  try{
-    fetch(ENDPOINT, {
-      method: "POST",
-      mode: "no-cors",
-      cache: "no-store",
-      keepalive: true,
-      body
-    });
-  }catch(_){}
-
-  return { ok:true };
-}
-
-
-
-
-  function getPresenceSid_(){
-    if (state.__presenceSid) return state.__presenceSid;
-    let sid = "";
-    try{ sid = sessionStorage.getItem("sm_presence_sid") || ""; }catch(_){}
-    if (!sid){
-      sid = (Date.now().toString(16) + Math.random().toString(16).slice(2));
-      try{ sessionStorage.setItem("sm_presence_sid", sid); }catch(_){}
-    }
-    state.__presenceSid = sid;
-    return sid;
-  }
-
-  function presenceStop_(){
-    const rid = state.__presenceRid;
-    const sid = getPresenceSid_();
-
-    if (state.__presenceTimer){
-      clearInterval(state.__presenceTimer);
-      state.__presenceTimer = null;
-    }
-
-    state.__presenceRid = null;
-
-    if (!rid) return;
-
-    // intento rápido (sin bloquear UI)
-    try{ apiPresence({ rid, sid, action: "close" }); }catch(_){}
-  }
-
-  function presenceStartOrSwitch_(newRid){
-    const rid = Number(newRid || 0);
-    if (!rid) return;
-
-    const sid = getPresenceSid_();
-    const prev = state.__presenceRid;
-
-    if (prev && prev !== rid){
-      try{ apiPresence({ rid: prev, sid, action: "close" }); }catch(_){}
-    }
-
-    state.__presenceRid = rid;
-
-    // marca abierto
-    try{ apiPresence({ rid, sid, action: "open" }); }catch(_){}
-
-    // heartbeat cada 10 min
-    if (state.__presenceTimer){
-      clearInterval(state.__presenceTimer);
-      state.__presenceTimer = null;
-    }
-    state.__presenceTimer = setInterval(()=>{
-      if (!state.__popupOpen) return;
-      if (!state.__presenceRid) return;
-      try{ apiPresence({ rid: state.__presenceRid, sid, action: "heartbeat" }); }catch(_){}
-    }, 10 * 60 * 1000);
-  }
-
-function presenceBeaconClose_(){
-  const rid = state.__presenceRid;
-  if (!rid) return;
-
-  const sid = getPresenceSid_();
-
-  // usa el mismo apiPresence (GET ping)
-  try{ apiPresence({ rid, sid, action: "close" }); }catch(_){}
-}
-
-
-
-
   /* ===================== [F4.9] TRACKING ESTADO ===================== */
   function renderTracking(estadoRaw){
     const box = qs("#sm-tracking");
@@ -553,12 +433,7 @@ function presenceBeaconClose_(){
     __preloadRid: null,
     __preloadPromise: null,
     __preloadResult: null,
-    __preloadTs: 0,
-    __popupOpen: false,
-    __presenceSid: "",
-    __presenceRid: null,
-    __presenceTimer: null
-
+    __preloadTs: 0
 
   };
 
@@ -652,7 +527,6 @@ function escapeHtml(s){
 
 
   function dealToUI(d){
-    const __prevRid = state.deal?.RID || null;
     state.deal = d;
     state.calls = [];
     state.pending = null;
@@ -707,12 +581,6 @@ function escapeHtml(s){
     if (shimmerV) shimmerV.classList.remove("is-loading");
     const payVVal = qs("#sm-ESTADO_PAGO_VIGILANCIA");
     if (payVVal) payVVal.style.display = "";
-
-        // si el popup está abierto y cambió el trato, mueve presencia al nuevo rid
-    if (state.__popupOpen && d?.RID && __prevRid && __prevRid !== d.RID){
-      presenceStartOrSwitch_(d.RID);
-    }
-
   }
 
   function callsToText(){
@@ -1803,10 +1671,6 @@ if (url){
     wireCopy();
     wirePayAndLog();
   });
-    window.addEventListener("beforeunload", ()=>{
-    try{ presenceBeaconClose_(); }catch(_){}
-  });
-
 })();
 
 
