@@ -3,7 +3,7 @@
   window.__smCRMAppLoaded = true;
 
   /* ===================== [F1] CONFIG ===================== */
-  const ENDPOINT = "https://script.google.com/macros/s/AKfycbwxLxm3JS6Ls-_Eh005TA3BhyI0f9bjFCcG0y7HHGBPDLEUuwkeSlPKGOla9WiTUVCB/exec";
+  const ENDPOINT = "https://script.google.com/macros/s/AKfycbwudQ6YEgpeyEEx-g5PbspVdJ0xVR_cXSMoSKa15bc2-kVIlsrRfA6jWDbjPqjCDGH-/exec";
   const ZOOM_ORIGIN = "https://applications.zoom.us";
   const ENDPOINT_LOG_MENSUAL = "https://script.google.com/macros/s/AKfycbzYjrCG36UnjyoZfgw_NOVAhgYn2kNQmKSQLigFMO9drgoPCVLgRyITN8OUyJDSrs4d/exec";
 
@@ -364,29 +364,35 @@
     return res.json();
   }
 
-async function apiPresence({ rid, sid, action }){
-  const body = new URLSearchParams({
-    mode: "presence",
-    rid: String(rid || ""),
-    sid: String(sid || ""),
-    action: String(action || "")
-  });
+function apiPresence({ rid, sid, action }){
+  const r = String(rid || "").trim();
+  const s = String(sid || "").trim();
+  const a = String(action || "").trim();
 
-  // IMPORTANTE: no-cors para que no falle por CORS (no necesitamos respuesta)
+  if (!r || !s || !a) return { ok:false };
+
+  const url =
+    `${ENDPOINT}?mode=presence` +
+    `&rid=${encodeURIComponent(r)}` +
+    `&sid=${encodeURIComponent(s)}` +
+    `&action=${encodeURIComponent(a)}` +
+    `&_=${Date.now()}`;
+
+  // “Ping” sin CORS: Image beacon
   try{
-    await fetch(ENDPOINT, {
-      method: "POST",
-      body,
-      keepalive: true,
-      mode: "no-cors"
-    });
-  }catch(_){
-    // si incluso así falla, lo arregla el sweep del backend
-  }
+    const img = new Image();
+    img.referrerPolicy = "no-referrer";
+    img.src = url;
+  }catch(_){}
 
-  // no podemos leer respuesta en no-cors (opaque), pero el POST se envía
-  return { ok: true };
+  // Fallback adicional (también sin leer respuesta)
+  try{
+    fetch(url, { mode: "no-cors", cache: "no-store", keepalive: true });
+  }catch(_){}
+
+  return { ok:true };
 }
+
 
 
   function getPresenceSid_(){
@@ -451,32 +457,11 @@ function presenceBeaconClose_(){
   if (!rid) return;
 
   const sid = getPresenceSid_();
-  const body = new URLSearchParams({
-    mode: "presence",
-    rid: String(rid),
-    sid: String(sid),
-    action: "close"
-  });
 
-  // sendBeacon (ideal en cierres)
-  try{
-    if (navigator.sendBeacon){
-      const blob = new Blob([body.toString()], { type: "application/x-www-form-urlencoded" });
-      navigator.sendBeacon(ENDPOINT, blob);
-      return;
-    }
-  }catch(_){}
-
-  // fallback: no-cors keepalive (para evitar CORS)
-  try{
-    fetch(ENDPOINT, {
-      method: "POST",
-      body,
-      keepalive: true,
-      mode: "no-cors"
-    });
-  }catch(_){}
+  // usa el mismo apiPresence (GET ping)
+  try{ apiPresence({ rid, sid, action: "close" }); }catch(_){}
 }
+
 
 
 
