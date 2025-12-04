@@ -919,17 +919,18 @@ function rebuildZoom_(reason){
       }catch(_){}
     }
 
-    if (url){
-      try{
-        window.open(url, "_blank", "noopener,noreferrer");
-        toast("Abre la pestaña de Zoom, inicia sesión y luego vuelve a intentar llamar.");
-      }catch(e){
-        // si el navegador bloquea el popup, al menos deja el mensaje (más tiempo)
-        toast("Zoom no conectó. Permite la ventana emergente para iniciar sesión en Zoom.", 7000);
-      }
-    }else{
-      toast("Zoom no conectó. Intenta de nuevo o recarga.");
-    }
+if (url){
+  try{
+    window.open(url, "_blank", "noopener,noreferrer");
+    toast("Abre la pestaña de Zoom, inicia sesión y luego vuelve a intentar llamar.", 7000);
+  }catch(e){
+    // si el navegador bloquea el popup, al menos deja el mensaje (más tiempo)
+    toast("Zoom no conectó. Permite la ventana emergente para iniciar sesión en Zoom.", 7000);
+  }
+}else{
+  toast("Zoom no conectó. Intenta de nuevo o recarga.");
+}
+
 
   }, 6500);
 }
