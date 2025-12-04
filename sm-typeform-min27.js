@@ -3,9 +3,9 @@
   window.__smCRMAppLoaded = true;
 
   /* ===================== [F1] CONFIG ===================== */
-  const ENDPOINT = "https://script.google.com/macros/s/AKfycbx2Fe_jl3D6RvWw71KQWL7ldnge11AeCunyV29R-Kuj_eT5ft0WnHFp7jp5wHyxtVzPTQ/exec";
+  const ENDPOINT = "https://script.google.com/macros/s/AKfycby_jjhpH0PRnzfVMpZGICLj_i_aOmNkUsEzTcfKPjSTM4NQIU93VlFnA5CtziUweNdm/exec";
   const ZOOM_ORIGIN = "https://applications.zoom.us";
-  const ENDPOINT_LOG_MENSUAL = "https://script.google.com/macros/s/AKfycbx1x1nTJjuJ7cXSA1Dw6mnTViRdPMDHAo2Vv72OjjsRqV-kzgl2o-tLtr9i8OzDt6WG/exec";
+  const ENDPOINT_LOG_MENSUAL = "https://script.google.com/macros/s/AKfycbzYjrCG36UnjyoZfgw_NOVAhgYn2kNQmKSQLigFMO9drgoPCVLgRyITN8OUyJDSrs4d/exec";
 
   // ZAPIER WEBHOOKS
   const ZAPIER_ANALISIS = "https://hooks.zapier.com/hooks/catch/6030955/ukh9o60/";
