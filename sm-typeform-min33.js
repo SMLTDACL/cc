@@ -364,17 +364,30 @@
     return res.json();
   }
 
-    async function apiPresence({ rid, sid, action }){
-    const body = new URLSearchParams({
-      mode: "presence",
-      rid: String(rid || ""),
-      sid: String(sid || ""),
-      action: String(action || "")
+async function apiPresence({ rid, sid, action }){
+  const body = new URLSearchParams({
+    mode: "presence",
+    rid: String(rid || ""),
+    sid: String(sid || ""),
+    action: String(action || "")
+  });
+
+  // IMPORTANTE: no-cors para que no falle por CORS (no necesitamos respuesta)
+  try{
+    await fetch(ENDPOINT, {
+      method: "POST",
+      body,
+      keepalive: true,
+      mode: "no-cors"
     });
-    const res = await fetch(ENDPOINT, { method:"POST", body, keepalive:true });
-    // si falla igual dejamos que el sweep de backend lo arregle
-    try{ return await res.json(); }catch(_){ return { ok: res.ok }; }
+  }catch(_){
+    // si incluso así falla, lo arregla el sweep del backend
   }
+
+  // no podemos leer respuesta en no-cors (opaque), pero el POST se envía
+  return { ok: true };
+}
+
 
   function getPresenceSid_(){
     if (state.__presenceSid) return state.__presenceSid;
@@ -433,30 +446,38 @@
     }, 10 * 60 * 1000);
   }
 
-  function presenceBeaconClose_(){
-    const rid = state.__presenceRid;
-    if (!rid) return;
+function presenceBeaconClose_(){
+  const rid = state.__presenceRid;
+  if (!rid) return;
 
-    const sid = getPresenceSid_();
-    const body = new URLSearchParams({
-      mode: "presence",
-      rid: String(rid),
-      sid: String(sid),
-      action: "close"
+  const sid = getPresenceSid_();
+  const body = new URLSearchParams({
+    mode: "presence",
+    rid: String(rid),
+    sid: String(sid),
+    action: "close"
+  });
+
+  // sendBeacon (ideal en cierres)
+  try{
+    if (navigator.sendBeacon){
+      const blob = new Blob([body.toString()], { type: "application/x-www-form-urlencoded" });
+      navigator.sendBeacon(ENDPOINT, blob);
+      return;
+    }
+  }catch(_){}
+
+  // fallback: no-cors keepalive (para evitar CORS)
+  try{
+    fetch(ENDPOINT, {
+      method: "POST",
+      body,
+      keepalive: true,
+      mode: "no-cors"
     });
+  }catch(_){}
+}
 
-    // sendBeacon (mejor en cierres)
-    try{
-      if (navigator.sendBeacon){
-        const blob = new Blob([body.toString()], { type: "application/x-www-form-urlencoded" });
-        navigator.sendBeacon(ENDPOINT, blob);
-        return;
-      }
-    }catch(_){}
-
-    // fallback
-    try{ fetch(ENDPOINT, { method:"POST", body, keepalive:true }); }catch(_){}
-  }
 
 
   /* ===================== [F4.9] TRACKING ESTADO ===================== */
