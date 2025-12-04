@@ -3,7 +3,7 @@
   window.__smCRMAppLoaded = true;
 
   /* ===================== [F1] CONFIG ===================== */
-  const ENDPOINT = "https://script.google.com/macros/s/AKfycby_jjhpH0PRnzfVMpZGICLj_i_aOmNkUsEzTcfKPjSTM4NQIU93VlFnA5CtziUweNdm/exec";
+  const ENDPOINT = "https://script.google.com/macros/s/AKfycbwxLxm3JS6Ls-_Eh005TA3BhyI0f9bjFCcG0y7HHGBPDLEUuwkeSlPKGOla9WiTUVCB/exec";
   const ZOOM_ORIGIN = "https://applications.zoom.us";
   const ENDPOINT_LOG_MENSUAL = "https://script.google.com/macros/s/AKfycbzYjrCG36UnjyoZfgw_NOVAhgYn2kNQmKSQLigFMO9drgoPCVLgRyITN8OUyJDSrs4d/exec";
 
