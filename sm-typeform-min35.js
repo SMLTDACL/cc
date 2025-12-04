@@ -368,30 +368,37 @@ function apiPresence({ rid, sid, action }){
   const r = String(rid || "").trim();
   const s = String(sid || "").trim();
   const a = String(action || "").trim();
-
   if (!r || !s || !a) return { ok:false };
 
-  const url =
-    `${ENDPOINT}?mode=presence` +
-    `&rid=${encodeURIComponent(r)}` +
-    `&sid=${encodeURIComponent(s)}` +
-    `&action=${encodeURIComponent(a)}` +
-    `&_=${Date.now()}`;
+  const body = new URLSearchParams({
+    mode: "presence",
+    rid: r,
+    sid: s,
+    action: a
+  });
 
-  // “Ping” sin CORS: Image beacon
+  // 1) Mejor opción: Beacon POST (no CORS, no bloquea)
   try{
-    const img = new Image();
-    img.referrerPolicy = "no-referrer";
-    img.src = url;
+    if (navigator.sendBeacon){
+      navigator.sendBeacon(ENDPOINT, body);
+      return { ok:true };
+    }
   }catch(_){}
 
-  // Fallback adicional (también sin leer respuesta)
+  // 2) Fallback: POST no-cors (tampoco leemos respuesta)
   try{
-    fetch(url, { mode: "no-cors", cache: "no-store", keepalive: true });
+    fetch(ENDPOINT, {
+      method: "POST",
+      mode: "no-cors",
+      cache: "no-store",
+      keepalive: true,
+      body
+    });
   }catch(_){}
 
   return { ok:true };
 }
+
 
 
 
