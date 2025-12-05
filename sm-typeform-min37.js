@@ -3,7 +3,7 @@
   window.__smCRMAppLoaded = true;
 
   /* ===================== [F1] CONFIG ===================== */
-  const ENDPOINT = "https://script.google.com/macros/s/AKfycby6scSZZhAnXS_eSY12m2gYu7X4-WzamqYsitKCyaPwTbU_MCUPjdte70E85HpK2w1A/exec";
+  const ENDPOINT = "https://script.google.com/macros/s/AKfycbxZyJqM_PdnS8bijdFUSJ3V-acXd-D9OUWEj8sMHuvVJ7vCOGqGIcbA8_GJPfXuDU3j/exec";
   const ZOOM_ORIGIN = "https://applications.zoom.us";
   const ENDPOINT_LOG_MENSUAL = "https://script.google.com/macros/s/AKfycbzYjrCG36UnjyoZfgw_NOVAhgYn2kNQmKSQLigFMO9drgoPCVLgRyITN8OUyJDSrs4d/exec";
 
@@ -61,15 +61,12 @@
     o.style.display = "flex";
   }
 
-    function closePopup(){
+  function closePopup(){
     const o = qs("#sm-overlay");
+        try{ presenceLeave_(); }catch(_){}
     if(!o) return;
     o.style.display = "none";
-
-    // Presence: al cerrar popup consideramos “salió del trato”
-    try{ presenceLeave_(); }catch(_){}
   }
-
 
   function showDealView(){
     qs("#sm-view-deal") && (qs("#sm-view-deal").style.display = "block");
@@ -259,6 +256,100 @@
     pre.textContent = lines.join("\n");
   }
 
+    /* ===================== [PRESENCE] POPUP ACTIVE (COL B) ===================== */
+  function getPresenceSid_(){
+    if (state.__presenceSid) return state.__presenceSid;
+    try{
+      const k = "sm_presence_sid";
+      let sid = sessionStorage.getItem(k);
+      if(!sid){
+        sid = "sid_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16);
+        sessionStorage.setItem(k, sid);
+      }
+      state.__presenceSid = sid;
+      return sid;
+    }catch(_){
+      // fallback si sessionStorage no disponible
+      const sid = "sid_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16);
+      state.__presenceSid = sid;
+      return sid;
+    }
+  }
+
+  function presenceSend_(action, rid, prevRid){
+    const sid = getPresenceSid_();
+    const r = (rid != null ? String(rid) : "");
+    const pr = (prevRid != null ? String(prevRid) : "");
+    const url =
+      `${ENDPOINT}?mode=presence&action=${encodeURIComponent(action)}&sid=${encodeURIComponent(sid)}`
+      + (r ? `&rid=${encodeURIComponent(r)}` : "")
+      + (pr ? `&prevRid=${encodeURIComponent(pr)}` : "")
+      + `&_=${Date.now()}`;
+
+    // misma modalidad que apiNext: GET liviano
+    try{
+      fetch(url, { cache:"no-store", keepalive:true }).catch(()=>{});
+    }catch(_){}
+  }
+
+  function presenceStartHeartbeat_(){
+    if (state.__presenceTimer) return;
+    state.__presenceTimer = setInterval(()=>{
+      const ov = qs("#sm-overlay");
+      const isOpen = ov && ov.style.display === "flex";
+      const rid = state.deal?.RID;
+
+      if (!isOpen || !rid){
+        // si no está abierto, no sigas pegándole
+        presenceStopHeartbeat_();
+        return;
+      }
+
+      presenceSend_("ping", rid, "");
+    }, 2 * 60 * 1000); // cada 2 min (seguro vs TTL 12 min)
+  }
+
+  function presenceStopHeartbeat_(){
+    if (state.__presenceTimer){
+      clearInterval(state.__presenceTimer);
+      state.__presenceTimer = null;
+    }
+  }
+
+  function presenceEnterOrSwitch_(newRid){
+    const prev = state.__presenceRid;
+    state.__presenceRid = newRid || null;
+
+    const ov = qs("#sm-overlay");
+    const isOpen = ov && ov.style.display === "flex";
+
+    if (!newRid) return;
+
+    // Solo consideramos “en trato” si el popup está abierto (o está por abrirse en el flujo)
+    // Igual mandamos "switch" cuando cambia deal para desmarcar el anterior.
+    presenceSend_(prev ? "switch" : "enter", newRid, prev || "");
+    presenceStartHeartbeat_();
+  }
+
+  function presenceLeave_(){
+    const rid = state.__presenceRid || state.deal?.RID || "";
+    presenceSend_("leave", rid, state.__presenceRid || "");
+    state.__presenceRid = null;
+    presenceStopHeartbeat_();
+  }
+
+  // intento extra al cerrar pestaña (no dependemos de esto)
+  window.addEventListener("pagehide", ()=>{
+    try{
+      const sid = getPresenceSid_();
+      const rid = state.__presenceRid || state.deal?.RID;
+      if(!rid) return;
+      const img = new Image();
+      img.src = `${ENDPOINT}?mode=presence&action=leave&sid=${encodeURIComponent(sid)}&rid=${encodeURIComponent(String(rid))}&prevRid=${encodeURIComponent(String(rid))}&_=${Date.now()}`;
+    }catch(_){}
+  });
+
+
   /* ===================== [F4] API ===================== */
   async function apiNext(idc, skipRids){
     const skip = Array.isArray(skipRids) ? skipRids.filter(Boolean).join(",") : "";
@@ -356,21 +447,6 @@
     return res.json();
   }
 
-    async function apiPresence({ action, sid, rid, prev_rid }){
-    const body = new URLSearchParams({
-      mode: "presence",
-      action: String(action || ""),
-      sid: String(sid || ""),
-      rid: String(rid || ""),
-      prev_rid: String(prev_rid || "")
-    });
-
-    const res = await fetch(ENDPOINT, { method:"POST", body });
-    if (!res.ok) throw new Error(`presence ${res.status}`);
-    return res.json();
-  }
-
-
   /* ===================== [F4.9] TRACKING ESTADO ===================== */
   function renderTracking(estadoRaw){
     const box = qs("#sm-tracking");
@@ -457,75 +533,8 @@
     __presenceRid: null,
     __presenceTimer: null
 
+
   };
-
-    function getPresenceSid_(){
-    try{
-      const k = "sm_presence_sid_v1";
-      let sid = sessionStorage.getItem(k);
-      if (!sid){
-        sid = "sid_" + Math.random().toString(16).slice(2) + "_" + Date.now();
-        sessionStorage.setItem(k, sid);
-      }
-      return sid;
-    }catch(_){
-      // fallback
-      return "sid_" + Math.random().toString(16).slice(2) + "_" + Date.now();
-    }
-  }
-
-  function presenceStartHeartbeat_(){
-    if (state.__presenceTimer) return;
-
-    state.__presenceTimer = setInterval(async ()=>{
-      const sid = state.__presenceSid;
-      const rid = state.__presenceRid;
-      if (!sid || !rid) return;
-
-      try{
-        await apiPresence({ action:"ping", sid, rid });
-      }catch(_){}
-    }, 120000); // 2 min
-  }
-
-  function presenceStopHeartbeat_(){
-    if (state.__presenceTimer){
-      clearInterval(state.__presenceTimer);
-      state.__presenceTimer = null;
-    }
-  }
-
-  async function presenceEnterOrSwitch_(nextRid, prevRid){
-    const sid = getPresenceSid_();
-    state.__presenceSid = sid;
-    state.__presenceRid = nextRid;
-
-    try{
-      if (prevRid && prevRid !== nextRid){
-        await apiPresence({ action:"switch", sid, rid: nextRid, prev_rid: prevRid });
-      } else {
-        await apiPresence({ action:"enter", sid, rid: nextRid });
-      }
-    }catch(_){}
-
-    presenceStartHeartbeat_();
-  }
-
-  async function presenceLeave_(){
-    const sid = state.__presenceSid || getPresenceSid_();
-    const rid = state.__presenceRid;
-
-    presenceStopHeartbeat_();
-
-    state.__presenceRid = null;
-
-    if (!rid) return;
-
-    try{
-      await apiPresence({ action:"leave", sid, rid, prev_rid: rid });
-    }catch(_){}
-  }
-
 
   const __smCLFmt = new Intl.DateTimeFormat("es-CL", {
     timeZone: "America/Santiago",
@@ -616,24 +625,18 @@ function escapeHtml(s){
 
 
 
-function dealToUI(d){
-  const prevRid = state.deal?.RID || null;
+  function dealToUI(d){
+    const __prevRid = state.deal?.RID || null;
+    state.deal = d;
+    state.calls = [];
+    state.pending = null;
+    state.__preloadRid = null;
+    state.__preloadPromise = null;
+    state.__preloadResult = null;
+    state.__preloadTs = 0;
 
-  state.deal = d;
-  state.calls = [];
-  state.pending = null;
-  state.__preloadRid = null;
-  state.__preloadPromise = null;
-  state.__preloadResult = null;
-  state.__preloadTs = 0;
 
-  // Presence: marca el trato actual (B=true) y baja el anterior si corresponde
-  try{
-    if (d?.RID) presenceEnterOrSwitch_(d.RID, prevRid);
-  }catch(_){}
-
-  renderCalls();
-
+    renderCalls();
     showDealView();
     renderTracking(d.ESTADO);
     renderHistorialBT(d.LOG_BT || d.BT || "");
@@ -678,6 +681,9 @@ function dealToUI(d){
     if (shimmerV) shimmerV.classList.remove("is-loading");
     const payVVal = qs("#sm-ESTADO_PAGO_VIGILANCIA");
     if (payVVal) payVVal.style.display = "";
+
+        try{ presenceEnterOrSwitch_(d?.RID || null); }catch(_){}
+
   }
 
   function callsToText(){
