@@ -276,18 +276,27 @@
     }
   }
 
-function presenceSend_(action, sid, rid, prevRid){
-  var url =
-    ENDPOINT +
-    "?mode=presence" +
-    "&action=" + encodeURIComponent(action || "") +
-    "&sid=" + encodeURIComponent(sid || "") +
-    "&rid=" + encodeURIComponent(String(rid || "")) +
-    (prevRid ? ("&prevRid=" + encodeURIComponent(String(prevRid))) : "") +
-    "&_=" + Date.now();
+function presenceSend_(action, rid, prevRid){
+  try{
+    const sid = getPresenceSid_();
+    const payload = {
+      mode: "presence",
+      action: String(action || ""),
+      sid: String(sid || ""),
+      rid: String(rid || ""),
+      prevRid: prevRid ? String(prevRid) : ""
+    };
 
-  try { (new Image()).src = url; } catch(_){}
+    fetch(ENDPOINT, {
+      method: "POST",
+      mode: "no-cors",
+      keepalive: true,
+      headers: { "Content-Type": "text/plain;charset=UTF-8" },
+      body: JSON.stringify(payload)
+    });
+  }catch(_){}
 }
+
 
 
   function presenceStartHeartbeat_(){
@@ -303,7 +312,8 @@ function presenceSend_(action, sid, rid, prevRid){
         return;
       }
 
-      presenceSend_("ping", rid, "");
+      presenceSend_("ping", rid);
+
     }, 2 * 60 * 1000); // cada 2 min (seguro vs TTL 12 min)
   }
 
@@ -326,26 +336,27 @@ function presenceSend_(action, sid, rid, prevRid){
     // Solo consideramos “en trato” si el popup está abierto (o está por abrirse en el flujo)
     // Igual mandamos "switch" cuando cambia deal para desmarcar el anterior.
     presenceSend_(prev ? "switch" : "enter", newRid, prev || "");
+
     presenceStartHeartbeat_();
   }
 
   function presenceLeave_(){
     const rid = state.__presenceRid || state.deal?.RID || "";
-    presenceSend_("leave", rid, state.__presenceRid || "");
+    presenceSend_("leave", rid, rid);
+
     state.__presenceRid = null;
     presenceStopHeartbeat_();
   }
 
   // intento extra al cerrar pestaña (no dependemos de esto)
-  window.addEventListener("pagehide", ()=>{
-    try{
-      const sid = getPresenceSid_();
-      const rid = state.__presenceRid || state.deal?.RID;
-      if(!rid) return;
-      const img = new Image();
-      img.src = `${ENDPOINT}?mode=presence&action=leave&sid=${encodeURIComponent(sid)}&rid=${encodeURIComponent(String(rid))}&prevRid=${encodeURIComponent(String(rid))}&_=${Date.now()}`;
-    }catch(_){}
-  });
+window.addEventListener("pagehide", ()=>{
+  try{
+    const rid = state.__presenceRid || state.deal?.RID;
+    if(!rid) return;
+    presenceSend_("leave", rid, rid);
+  }catch(_){}
+});
+
 
 
   /* ===================== [F4] API ===================== */
