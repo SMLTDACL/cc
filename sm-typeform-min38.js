@@ -276,21 +276,19 @@
     }
   }
 
-  function presenceSend_(action, rid, prevRid){
-    const sid = getPresenceSid_();
-    const r = (rid != null ? String(rid) : "");
-    const pr = (prevRid != null ? String(prevRid) : "");
-    const url =
-      `${ENDPOINT}?mode=presence&action=${encodeURIComponent(action)}&sid=${encodeURIComponent(sid)}`
-      + (r ? `&rid=${encodeURIComponent(r)}` : "")
-      + (pr ? `&prevRid=${encodeURIComponent(pr)}` : "")
-      + `&_=${Date.now()}`;
+function presenceSend_(action, sid, rid, prevRid){
+  var url =
+    ENDPOINT +
+    "?mode=presence" +
+    "&action=" + encodeURIComponent(action || "") +
+    "&sid=" + encodeURIComponent(sid || "") +
+    "&rid=" + encodeURIComponent(String(rid || "")) +
+    (prevRid ? ("&prevRid=" + encodeURIComponent(String(prevRid))) : "") +
+    "&_=" + Date.now();
 
-    // misma modalidad que apiNext: GET liviano
-    try{
-      fetch(url, { cache:"no-store", keepalive:true }).catch(()=>{});
-    }catch(_){}
-  }
+  try { (new Image()).src = url; } catch(_){}
+}
+
 
   function presenceStartHeartbeat_(){
     if (state.__presenceTimer) return;
