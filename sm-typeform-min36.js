@@ -3,7 +3,7 @@
   window.__smCRMAppLoaded = true;
 
   /* ===================== [F1] CONFIG ===================== */
-  const ENDPOINT = "https://script.google.com/macros/s/AKfycby_jjhpH0PRnzfVMpZGICLj_i_aOmNkUsEzTcfKPjSTM4NQIU93VlFnA5CtziUweNdm/exec";
+  const ENDPOINT = "https://script.google.com/macros/s/AKfycby6scSZZhAnXS_eSY12m2gYu7X4-WzamqYsitKCyaPwTbU_MCUPjdte70E85HpK2w1A/exec";
   const ZOOM_ORIGIN = "https://applications.zoom.us";
   const ENDPOINT_LOG_MENSUAL = "https://script.google.com/macros/s/AKfycbzYjrCG36UnjyoZfgw_NOVAhgYn2kNQmKSQLigFMO9drgoPCVLgRyITN8OUyJDSrs4d/exec";
 
@@ -61,11 +61,15 @@
     o.style.display = "flex";
   }
 
-  function closePopup(){
+    function closePopup(){
     const o = qs("#sm-overlay");
     if(!o) return;
     o.style.display = "none";
+
+    // Presence: al cerrar popup consideramos “salió del trato”
+    try{ presenceLeave_(); }catch(_){}
   }
+
 
   function showDealView(){
     qs("#sm-view-deal") && (qs("#sm-view-deal").style.display = "block");
@@ -352,6 +356,21 @@
     return res.json();
   }
 
+    async function apiPresence({ action, sid, rid, prev_rid }){
+    const body = new URLSearchParams({
+      mode: "presence",
+      action: String(action || ""),
+      sid: String(sid || ""),
+      rid: String(rid || ""),
+      prev_rid: String(prev_rid || "")
+    });
+
+    const res = await fetch(ENDPOINT, { method:"POST", body });
+    if (!res.ok) throw new Error(`presence ${res.status}`);
+    return res.json();
+  }
+
+
   /* ===================== [F4.9] TRACKING ESTADO ===================== */
   function renderTracking(estadoRaw){
     const box = qs("#sm-tracking");
@@ -433,9 +452,80 @@
     __preloadRid: null,
     __preloadPromise: null,
     __preloadResult: null,
-    __preloadTs: 0
+    __preloadTs: 0,
+    __presenceSid: null,
+    __presenceRid: null,
+    __presenceTimer: null
 
   };
+
+    function getPresenceSid_(){
+    try{
+      const k = "sm_presence_sid_v1";
+      let sid = sessionStorage.getItem(k);
+      if (!sid){
+        sid = "sid_" + Math.random().toString(16).slice(2) + "_" + Date.now();
+        sessionStorage.setItem(k, sid);
+      }
+      return sid;
+    }catch(_){
+      // fallback
+      return "sid_" + Math.random().toString(16).slice(2) + "_" + Date.now();
+    }
+  }
+
+  function presenceStartHeartbeat_(){
+    if (state.__presenceTimer) return;
+
+    state.__presenceTimer = setInterval(async ()=>{
+      const sid = state.__presenceSid;
+      const rid = state.__presenceRid;
+      if (!sid || !rid) return;
+
+      try{
+        await apiPresence({ action:"ping", sid, rid });
+      }catch(_){}
+    }, 120000); // 2 min
+  }
+
+  function presenceStopHeartbeat_(){
+    if (state.__presenceTimer){
+      clearInterval(state.__presenceTimer);
+      state.__presenceTimer = null;
+    }
+  }
+
+  async function presenceEnterOrSwitch_(nextRid, prevRid){
+    const sid = getPresenceSid_();
+    state.__presenceSid = sid;
+    state.__presenceRid = nextRid;
+
+    try{
+      if (prevRid && prevRid !== nextRid){
+        await apiPresence({ action:"switch", sid, rid: nextRid, prev_rid: prevRid });
+      } else {
+        await apiPresence({ action:"enter", sid, rid: nextRid });
+      }
+    }catch(_){}
+
+    presenceStartHeartbeat_();
+  }
+
+  async function presenceLeave_(){
+    const sid = state.__presenceSid || getPresenceSid_();
+    const rid = state.__presenceRid;
+
+    presenceStopHeartbeat_();
+
+    state.__presenceRid = null;
+
+    if (!rid) return;
+
+    try{
+      await apiPresence({ action:"leave", sid, rid, prev_rid: rid });
+    }catch(_){}
+  }
+
 
   const __smCLFmt = new Intl.DateTimeFormat("es-CL", {
     timeZone: "America/Santiago",
@@ -526,17 +616,24 @@ function escapeHtml(s){
 
 
 
-  function dealToUI(d){
-    state.deal = d;
-    state.calls = [];
-    state.pending = null;
-    state.__preloadRid = null;
-    state.__preloadPromise = null;
-    state.__preloadResult = null;
-    state.__preloadTs = 0;
+function dealToUI(d){
+  const prevRid = state.deal?.RID || null;
 
+  state.deal = d;
+  state.calls = [];
+  state.pending = null;
+  state.__preloadRid = null;
+  state.__preloadPromise = null;
+  state.__preloadResult = null;
+  state.__preloadTs = 0;
 
-    renderCalls();
+  // Presence: marca el trato actual (B=true) y baja el anterior si corresponde
+  try{
+    if (d?.RID) presenceEnterOrSwitch_(d.RID, prevRid);
+  }catch(_){}
+
+  renderCalls();
+
     showDealView();
     renderTracking(d.ESTADO);
     renderHistorialBT(d.LOG_BT || d.BT || "");
