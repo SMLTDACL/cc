@@ -299,30 +299,54 @@ function presenceSend_(action, rid, prevRid){
 
 
 
-  function presenceStartHeartbeat_(){
-    if (state.__presenceTimer) return;
-    state.__presenceTimer = setInterval(()=>{
-      const ov = qs("#sm-overlay");
-      const isOpen = ov && ov.style.display === "flex";
-      const rid = state.deal?.RID;
+function presenceStartHeartbeat_(){
+  if (state.__presenceTimer || state.__presenceTimeout) return;
 
-      if (!isOpen || !rid){
-        // si no está abierto, no sigas pegándole
-        presenceStopHeartbeat_();
-        return;
-      }
+  // Queremos 1 ping por “bucket” de 10 minutos (como tu sweep).
+  const PERIOD_MS = 10 * 60 * 1000;
+  // Lo mandamos un poco antes del borde del bucket para dar margen.
+  const EARLY_MS  = 15000; // 15s antes
 
-      presenceSend_("ping", rid);
+  function tick_(){
+    const ov = qs("#sm-overlay");
+    const isOpen = ov && ov.style.display === "flex";
+    const rid = state.deal?.RID;
 
-    }, 2 * 60 * 1000); // cada 2 min (seguro vs TTL 12 min)
-  }
-
-  function presenceStopHeartbeat_(){
-    if (state.__presenceTimer){
-      clearInterval(state.__presenceTimer);
-      state.__presenceTimer = null;
+    if (!isOpen || !rid){
+      presenceStopHeartbeat_();
+      return;
     }
+
+    presenceSend_("ping", rid);
   }
+
+  // Programa el primer ping “justo antes” del próximo bloque de 10 min
+  const now = Date.now();
+  let delay = (PERIOD_MS - (now % PERIOD_MS)) - EARLY_MS;
+  if (delay < 0) delay = 0;
+
+  state.__presenceTimeout = setTimeout(()=>{
+    state.__presenceTimeout = null;
+
+    tick_();
+
+    // Luego queda fijo cada 10 min
+    state.__presenceTimer = setInterval(tick_, PERIOD_MS);
+  }, delay);
+}
+
+
+function presenceStopHeartbeat_(){
+  if (state.__presenceTimeout){
+    clearTimeout(state.__presenceTimeout);
+    state.__presenceTimeout = null;
+  }
+  if (state.__presenceTimer){
+    clearInterval(state.__presenceTimer);
+    state.__presenceTimer = null;
+  }
+}
+
 
   function presenceEnterOrSwitch_(newRid){
     const prev = state.__presenceRid;
@@ -540,7 +564,8 @@ window.addEventListener("pagehide", ()=>{
     __preloadTs: 0,
     __presenceSid: null,
     __presenceRid: null,
-    __presenceTimer: null
+    __presenceTimer: null,
+    __presenceTimeout: null
 
 
   };
